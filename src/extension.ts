@@ -35,13 +35,15 @@ class Callee {
 export class TreeViewItem extends vscode.TreeItem {
 	constructor(
 		public readonly label: string,
-		private version: string,
+		public line: string,
+		public path: string,
 		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
 		public readonly funcInfo:FuncInfo
 	) {
 		super(label, collapsibleState);
-		this.tooltip = `${this.label}-${this.version}`;
-		this.description = this.version;
+		this.tooltip = `${this.label}-${this.line}`;
+		this.description = this.line;
+		this.path = path;
 	}
 
 	contextValue = 'ctreeItem';
@@ -85,13 +87,13 @@ export class CtreeProvider implements vscode.TreeDataProvider<TreeViewItem> {
 
 		if (func == null) {
 			rootGraph.forEach(element => {
-				let item:TreeViewItem = new TreeViewItem(element.funcName, '', vscode.TreeItemCollapsibleState.Collapsed, element);
+				let item:TreeViewItem = new TreeViewItem(element.funcName, '', element.fileName, vscode.TreeItemCollapsibleState.Collapsed, element);
 				res.push(item);
 			});
 		}
 		else {
 			func.callee.forEach(element => {
-				let item:TreeViewItem = new TreeViewItem(element.funcInfo.funcName, element.pos.toString(), vscode.TreeItemCollapsibleState.Collapsed, element.funcInfo);
+				let item:TreeViewItem = new TreeViewItem(element.funcInfo.funcName, element.pos.toString(), func.fileName, vscode.TreeItemCollapsibleState.Collapsed, element.funcInfo);
 				res.push(item);
 			});
 		}
@@ -231,12 +233,31 @@ export function showTree(offset:string, funcInfo:FuncInfo) {
 	});
 }
 
-export function gotoLine(node:TreeViewItem) {
+export function gotoDef(node:TreeViewItem) {
 	let dir = getRoot();
 	const uriref: vscode.Uri = vscode.Uri.file(dir + '/' + node.funcInfo.fileName);
         vscode.workspace.openTextDocument(uriref).then(doc => {
             vscode.window.showTextDocument(doc ).then(() => {
 				const line: number = node.funcInfo.pos;
+				if (vscode.window.activeTextEditor == null)
+					return;
+                let reviewType: vscode.TextEditorRevealType = vscode.TextEditorRevealType.InCenter;
+        		if (line === vscode.window.activeTextEditor.selection.active.line) {
+            		reviewType = vscode.TextEditorRevealType.InCenterIfOutsideViewport;
+        		}
+        		const newSe = new vscode.Selection(line, 0, line, 0);
+        		vscode.window.activeTextEditor.selection = newSe;
+        		vscode.window.activeTextEditor.revealRange(newSe, reviewType);
+            });
+        });
+}
+
+export function gotoLine(node:TreeViewItem) {
+	let dir = getRoot();
+	const uriref: vscode.Uri = vscode.Uri.file(dir + '/' + node.path);
+        vscode.workspace.openTextDocument(uriref).then(doc => {
+            vscode.window.showTextDocument(doc ).then(() => {
+				const line: number = parseInt(node.line);
 				if (vscode.window.activeTextEditor == null)
 					return;
                 let reviewType: vscode.TextEditorRevealType = vscode.TextEditorRevealType.InCenter;
@@ -299,6 +320,9 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposable);
 
 	
+	disposable = vscode.commands.registerCommand('ctree.gotodef', gotoDef);
+	context.subscriptions.push(disposable);
+
 	disposable = vscode.commands.registerCommand('ctree.gotoline', gotoLine);
 	context.subscriptions.push(disposable);
 

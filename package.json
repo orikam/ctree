@@ -14,8 +14,7 @@
     ],
     "main": "./out/extension.js",
     "contributes": {
-        "commands": [
-            {
+        "commands": [{
                 "command": "ctree.build",
                 "title": "ctree build"
             },
@@ -24,30 +23,34 @@
                 "title": "ctree show"
             },
             {
-                "command": "ctree.gotoline",
+                "command": "ctree.gotodef",
                 "title": "goto def"
+            },
+            {
+                "command": "ctree.gotoline",
+                "title": "goto line"
             }
         ],
         "viewsContainers": {
-            "activitybar": [
-                {
-                    "id": "ctree",
-                    "title": "ctree",
-                    "icon": "./media/tree.svg"
-                }
-            ]
+            "activitybar": [{
+                "id": "ctree",
+                "title": "ctree",
+                "icon": "./media/tree.svg"
+            }]
         },
         "views": {
-            "ctree": [
-                {
-                    "id": "ctreeview",
-                    "name": "hierarchy",
-                    "contextualTitle": "tree Explorer"
-                }
-            ]
+            "ctree": [{
+                "id": "ctreeview",
+                "name": "hierarchy",
+                "contextualTitle": "tree Explorer"
+            }]
         },
         "menus": {
-            "view/item/context": [
+            "view/item/context": [{
+                    "command": "ctree.gotodef",
+                    "when": "view == ctreeview",
+                    "group": "inline"
+                },
                 {
                     "command": "ctree.gotoline",
                     "when": "view == ctreeview",
