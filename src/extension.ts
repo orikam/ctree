@@ -264,7 +264,7 @@ export function gotoLine(node:TreeViewItem) {
         		if (line === vscode.window.activeTextEditor.selection.active.line) {
             		reviewType = vscode.TextEditorRevealType.InCenterIfOutsideViewport;
         		}
-        		const newSe = new vscode.Selection(line, 0, line, 0);
+        		const newSe = new vscode.Selection(line - 1 , 0, line - 1, 0);
         		vscode.window.activeTextEditor.selection = newSe;
         		vscode.window.activeTextEditor.revealRange(newSe, reviewType);
             });
@@ -277,11 +277,12 @@ export async function findCaller() {
 	let word = await getWord();
 	let definition = await doCLI(`cscope -d -fcscope.out -L1 ${word} `);
 	let base = decodeLine(definition as string);
-	await buildGraph(base.funcName, rootGraph).then(() => {
-		rootGraph.forEach(element => {
-			showTree('+', element);
-		});
-	});
+	await buildGraph(base.funcName, rootGraph);
+	//await buildGraph(base.funcName, rootGraph).then(() => {
+	//	rootGraph.forEach(element => {
+	//		showTree('+', element);
+	//	});
+	//});
 	ctreeViewProvider.refresh();
 }
 
