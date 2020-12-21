@@ -85,13 +85,13 @@ export class CtreeProvider implements vscode.TreeDataProvider<TreeViewItem> {
 
 		if (func == null) {
 			rootGraph.forEach(element => {
-				let item:TreeViewItem = new TreeViewItem(element.funcName, '1', vscode.TreeItemCollapsibleState.Collapsed, element);
+				let item:TreeViewItem = new TreeViewItem(element.funcName, '', vscode.TreeItemCollapsibleState.Collapsed, element);
 				res.push(item);
 			});
 		}
 		else {
 			func.callee.forEach(element => {
-				let item:TreeViewItem = new TreeViewItem(element.funcInfo.funcName, element.funcInfo.pos.toString(), vscode.TreeItemCollapsibleState.Collapsed, element.funcInfo);
+				let item:TreeViewItem = new TreeViewItem(element.funcInfo.funcName, element.pos.toString(), vscode.TreeItemCollapsibleState.Collapsed, element.funcInfo);
 				res.push(item);
 			});
 		}
@@ -225,6 +225,7 @@ export async function buildGraph(funcName:string, rootArray:Array<FuncInfo>) {
 let rootGraph:Array<FuncInfo> = <FuncInfo[]>[];
 
 export function showTree(offset:string, funcInfo:FuncInfo) {
+	console.log(offset + ' ' +  funcInfo.funcName);
 	funcInfo.callee.forEach(callee => {
 		showTree(offset + '+', callee.funcInfo);
 	});
@@ -301,9 +302,9 @@ export function activate(context: vscode.ExtensionContext) {
 	disposable = vscode.commands.registerCommand('ctree.gotoline', gotoLine);
 	context.subscriptions.push(disposable);
 
-	const ctreeProvider = new CtreeProvider();
-	vscode.window.registerTreeDataProvider('ctreeview', ctreeProvider);
-	//vscode.window.createTreeView('ctreeview', {treeDataProvider: new CtreeProvider()});
+	//const ctreeProvider = new CtreeProvider();
+	//vscode.window.registerTreeDataProvider('ctreeview', ctreeProvider);
+	vscode.window.createTreeView('ctreeview', {treeDataProvider: new CtreeProvider()});
 
 }
 
