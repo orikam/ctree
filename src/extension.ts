@@ -5,6 +5,107 @@ import { Func } from 'mocha';
 import * as vscode from 'vscode';
 const cp = require('child_process');
 
+class FuncInfo {
+	funcName: string = '';
+	fileName: string = '';
+	desc: string = '';
+	pos: number;
+	callee: Array<Callee>;
+
+	constructor(funcName: string, fileName: string, pos: number) {
+		this.funcName = funcName;
+		this.fileName = fileName;
+		this.pos = pos;
+		this.callee = <Callee[]>[];
+	}
+}
+
+class Callee {
+	funcInfo: FuncInfo;
+	pos: Number;
+	desc: String;
+
+	constructor(func:FuncInfo, pos:Number, desc:String) {
+		this.funcInfo = func;
+		this.pos = pos;
+		this.desc = desc;
+	}
+}
+
+export class TreeViewItem extends vscode.TreeItem {
+	constructor(
+		public readonly label: string,
+		private version: string,
+		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+		public readonly funcInfo:FuncInfo
+	) {
+		super(label, collapsibleState);
+		this.tooltip = `${this.label}-${this.version}`;
+		this.description = this.version;
+	}
+
+	contextValue = 'ctreeItem';
+}
+
+
+export class CtreeProvider implements vscode.TreeDataProvider<TreeViewItem> {
+	
+	constructor(private workspaceRoot?: string) { 
+		ctreeViewProvider = this;
+	}
+
+	private _onDidChangeTreeData: vscode.EventEmitter<TreeViewItem | undefined | null | void> = new vscode.EventEmitter<TreeViewItem | undefined | null | void>();
+  	readonly onDidChangeTreeData: vscode.Event<TreeViewItem | undefined | null | void> = this._onDidChangeTreeData.event;
+
+  	refresh(): void {
+    	this._onDidChangeTreeData.fire();
+  	}
+
+	getTreeItem(element: TreeViewItem): vscode.TreeItem {
+		return element;
+	}
+
+	getChildren(element?: TreeViewItem): Thenable<TreeViewItem[]> {
+		//if (!this.workspaceRoot) {
+		//	vscode.window.showInformationMessage('No dependency in empty workspace');
+		//	return Promise.resolve([]);
+		//}
+
+		if (element) {
+			return Promise.resolve(this.getFuncInfo(element.funcInfo));
+		} 
+		return Promise.resolve(this.getFuncInfo());
+	}
+
+	/**
+	 * Given the path to package.json, read all its dependencies and devDependencies.
+	 */
+	private getFuncInfo(func?:FuncInfo): TreeViewItem[] {
+		let res:Array<TreeViewItem> = <TreeViewItem[]>[];
+
+		if (func == null) {
+			rootGraph.forEach(element => {
+				let item:TreeViewItem = new TreeViewItem(element.funcName, '1', vscode.TreeItemCollapsibleState.Collapsed, element);
+				res.push(item);
+			});
+		}
+		else {
+			func.callee.forEach(element => {
+				let item:TreeViewItem = new TreeViewItem(element.funcInfo.funcName, element.funcInfo.pos.toString(), vscode.TreeItemCollapsibleState.Collapsed, element.funcInfo);
+				res.push(item);
+			});
+		}
+		return res;
+	}
+
+	
+}
+
+let ctreeViewProvider: CtreeProvider;
+  
+
+
+
 
 export function getRoot(): string {
 	let rFolder: vscode.Uri;
@@ -22,7 +123,6 @@ export function getRoot(): string {
 
 export function doCLI(command: string) {
 
-	console.log('command: ' + command);
 	let dir = getRoot();
 	return new Promise((resolve, reject) => {
 		cp.exec(command, { cwd: dir }, (error: string, stdout: string, stderr: string) => {
@@ -30,8 +130,6 @@ export function doCLI(command: string) {
 				console.error(`exec error: ${error}`);
 				return;
 			}
-			//console.log(`stdout: ${stdout}`);
-			//console.error(`stderr: ${stderr}`);
 			resolve(stdout);
 		});
 	});
@@ -63,38 +161,11 @@ export function getWord() {
 				}
 			}
 			const text = editor.document.getText(editor.selection);
-			//console.log('selection: ' + text);
 			resolve (text);
 		});
 	});
 }
 
-class FuncInfo {
-	funcName: string = '';
-	fileName: string = '';
-	desc: string = '';
-	pos: number;
-	callee: Array<Callee>;
-
-	constructor(funcName: string, fileName: string, pos: number) {
-		this.funcName = funcName;
-		this.fileName = fileName;
-		this.pos = pos;
-		this.callee = <Callee[]>[];
-	}
-}
-
-class Callee {
-	funcInfo: FuncInfo;
-	pos: Number;
-	desc: String;
-
-	constructor(func:FuncInfo, pos:Number, desc:String) {
-		this.funcInfo = func;
-		this.pos = pos;
-		this.desc = desc;
-	}
-}
 
 
 interface Dictionary<T> {
@@ -106,9 +177,6 @@ let dFunctions:Dictionary<FuncInfo>;
 
 export function decodeLine(line: string): FuncInfo {
 	let lineSplit = line.split(' ');
-	//lineSplit.forEach(element => {
-		//console.log('line: ' + element);
-	//});
 	return new FuncInfo(lineSplit[1], lineSplit[0], Number(lineSplit[2]));
 }
 
@@ -124,7 +192,6 @@ export async function buildGraph(funcName:string, rootArray:Array<FuncInfo>) {
 
 	let definition = await doCLI(`cscope -d -fcscope.out -L1 ${funcName} `);
 	let base = decodeLine(definition as string);
-	console.log('ooOri callee: ' + base.funcName);
 	dFunctions[base.funcName] = base;
 
 	// Find caller functions
@@ -140,7 +207,6 @@ export async function buildGraph(funcName:string, rootArray:Array<FuncInfo>) {
 		let line = lines[i];
 		let info:FuncInfo;
 		if(line.length > 3) {
-			console.log('ooOri caller: ' + line);
 			let tempCaller = decodeLine(line);
 			let caller = dFunctions[tempCaller.funcName];
 			if (caller == null) {
@@ -159,10 +225,28 @@ export async function buildGraph(funcName:string, rootArray:Array<FuncInfo>) {
 let rootGraph:Array<FuncInfo> = <FuncInfo[]>[];
 
 export function showTree(offset:string, funcInfo:FuncInfo) {
-	console.log(offset + ' ' ,funcInfo.funcName);
 	funcInfo.callee.forEach(callee => {
 		showTree(offset + '+', callee.funcInfo);
 	});
+}
+
+export function gotoLine(node:TreeViewItem) {
+	let dir = getRoot();
+	const uriref: vscode.Uri = vscode.Uri.file(dir + '/' + node.funcInfo.fileName);
+        vscode.workspace.openTextDocument(uriref).then(doc => {
+            vscode.window.showTextDocument(doc ).then(() => {
+				const line: number = node.funcInfo.pos;
+				if (vscode.window.activeTextEditor == null)
+					return;
+                let reviewType: vscode.TextEditorRevealType = vscode.TextEditorRevealType.InCenter;
+        		if (line === vscode.window.activeTextEditor.selection.active.line) {
+            		reviewType = vscode.TextEditorRevealType.InCenterIfOutsideViewport;
+        		}
+        		const newSe = new vscode.Selection(line, 0, line, 0);
+        		vscode.window.activeTextEditor.selection = newSe;
+        		vscode.window.activeTextEditor.revealRange(newSe, reviewType);
+            });
+        });
 }
 
 export async function findCaller() {
@@ -176,20 +260,13 @@ export async function findCaller() {
 			showTree('+', element);
 		});
 	});
-	
-	
-
-	
-
+	ctreeViewProvider.refresh();
 }
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "ctree" is now active!');
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
@@ -199,13 +276,10 @@ export function activate(context: vscode.ExtensionContext) {
 		let folder: string;
 
 		// The code you place here will be executed every time your command is executed
-		console.log('name: ' + vscode.workspace.name);
 		if (vscode.workspace.workspaceFolders !== undefined) {
 			rFolder = vscode.workspace.workspaceFolders[0].uri;
 			folder = rFolder.toString();
 			folder = folder.replace('file:', '');
-			console.log('root: ' + rFolder);
-			console.log('root string: ' + folder);
 		}
 
 
@@ -214,28 +288,22 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('Hello World from ctree!');
 		//buildDatabase();
 		buildAndLoadDatabase().then(() => {
-			console.log('done:');
 			vscode.window.showInformationMessage('Done building database');
 		});
-		/*
-				let createFileList = new Promise((resolve, reject) => {
-					cp.execSync(`find ${folder} -name *.c -o -name *.h > ${folder}/cscope.files`);
-					cp.execSync(`cscope -R -i ${folder}/cscope.files`);
-					cp.execSync(`mv cscope.out ${folder}/cscope.out`);
-					resolve('OK');
-				}).then(() => {
-					console.log('done:');
-					vscode.window.showInformationMessage('Done building!');
-					vscode.window.showInformationMessage('Done building!!!!');
-				});
-		*/
-
 	});
 
 	context.subscriptions.push(disposable);
 
 	disposable = vscode.commands.registerCommand('ctree.findcaller', findCaller);
 	context.subscriptions.push(disposable);
+
+	
+	disposable = vscode.commands.registerCommand('ctree.gotoline', gotoLine);
+	context.subscriptions.push(disposable);
+
+	const ctreeProvider = new CtreeProvider();
+	vscode.window.registerTreeDataProvider('ctreeview', ctreeProvider);
+	//vscode.window.createTreeView('ctreeview', {treeDataProvider: new CtreeProvider()});
 
 }
 
