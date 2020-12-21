@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import { resolve } from 'dns';
+import { Func } from 'mocha';
 import * as vscode from 'vscode';
 const cp = require('child_process');
 
@@ -10,7 +11,6 @@ export function getRoot(): string {
 	let folder: string = "";
 
 	// The code you place here will be executed every time your command is executed
-	console.log('name: ' + vscode.workspace.name);
 	if (vscode.workspace.workspaceFolders !== undefined) {
 		rFolder = vscode.workspace.workspaceFolders[0].uri;
 		folder = rFolder.toString();
@@ -30,8 +30,8 @@ export function doCLI(command: string) {
 				console.error(`exec error: ${error}`);
 				return;
 			}
-			console.log(`stdout: ${stdout}`);
-			console.error(`stderr: ${stderr}`);
+			//console.log(`stdout: ${stdout}`);
+			//console.error(`stderr: ${stderr}`);
 			resolve(stdout);
 		});
 	});
@@ -39,7 +39,7 @@ export function doCLI(command: string) {
 
 export async function buildAndLoadDatabase() {
 	//	let dir = getRoot();
-	await doCLI(`find -name *.c -o -name *.h > cscope.files`);
+	await doCLI(`find . -name *.c -o -name *.h > cscope.files`);
 	await doCLI(`cscope -b -R -i cscope.files`);
 	//await doCLI(`mv cscope.out cscope.out`);
 
@@ -63,40 +63,123 @@ export function getWord() {
 				}
 			}
 			const text = editor.document.getText(editor.selection);
-			console.log('selection: ' + text);
+			//console.log('selection: ' + text);
 			resolve (text);
 		});
-	};
+	});
 }
 
 class FuncInfo {
 	funcName: string = '';
 	fileName: string = '';
+	desc: string = '';
 	pos: number;
-	callers: Array<FuncInfo>;
-	callee: Array<FuncInfo>;
+	callee: Array<Callee>;
+
 	constructor(funcName: string, fileName: string, pos: number) {
 		this.funcName = funcName;
 		this.fileName = fileName;
 		this.pos = pos;
-		this.callers = <FuncInfo[]>[];
-		this.callee = <FuncInfo[]>[];
+		this.callee = <Callee[]>[];
 	}
 }
+
+class Callee {
+	funcInfo: FuncInfo;
+	pos: Number;
+	desc: String;
+
+	constructor(func:FuncInfo, pos:Number, desc:String) {
+		this.funcInfo = func;
+		this.pos = pos;
+		this.desc = desc;
+	}
+}
+
+
+interface Dictionary<T> {
+	[Key: string]: T;
+}
+
+let dFunctions:Dictionary<FuncInfo>;
+
+
 export function decodeLine(line: string): FuncInfo {
 	let lineSplit = line.split(' ');
-	lineSplit.forEach(element => {
-		console.log('line: ' + element);
+	//lineSplit.forEach(element => {
+		//console.log('line: ' + element);
+	//});
+	return new FuncInfo(lineSplit[1], lineSplit[0], Number(lineSplit[2]));
+}
+
+/*
+export function decodeCaller(line: string): Callee {
+	let lineSplit = line.split(' ', 4);
+	
+	return new Callee(dFunctions[tempCaller.funcName];, lineSplit[0], Number(lineSplit[2]));
+}
+*/
+
+export async function buildGraph(funcName:string, rootArray:Array<FuncInfo>) {
+
+	let definition = await doCLI(`cscope -d -fcscope.out -L1 ${funcName} `);
+	let base = decodeLine(definition as string);
+	console.log('ooOri callee: ' + base.funcName);
+	dFunctions[base.funcName] = base;
+
+	// Find caller functions
+	let data:string = await doCLI(`cscope -d -fcscope.out -L3 ${funcName} `) as string;
+	// If no caller it means it is root.
+	let lines = data.split('\n');
+	if(lines.length <= 1) {
+		rootArray.push(base);
+		return;
+	}
+
+	for(let i:number = 0; i < lines.length; i++) {
+		let line = lines[i];
+		let info:FuncInfo;
+		if(line.length > 3) {
+			console.log('ooOri caller: ' + line);
+			let tempCaller = decodeLine(line);
+			let caller = dFunctions[tempCaller.funcName];
+			if (caller == null) {
+				await buildGraph(tempCaller.funcName, rootArray);
+				caller = dFunctions[tempCaller.funcName];
+			}
+			let callee = new Callee(dFunctions[base.funcName], tempCaller.pos, tempCaller.desc);
+			caller.callee.push(callee);
+			
+		}
+
+	};
+	return;
+}
+
+let rootGraph:Array<FuncInfo> = <FuncInfo[]>[];
+
+export function showTree(offset:string, funcInfo:FuncInfo) {
+	console.log(offset + ' ' ,funcInfo.funcName);
+	funcInfo.callee.forEach(callee => {
+		showTree(offset + '+', callee.funcInfo);
 	});
-	return new FuncInfo(lineSplit[0], lineSplit[1], Number(lineSplit[2]));
 }
 
 export async function findCaller() {
+	dFunctions = {};
+	rootGraph = [];
 	let word = await getWord();
 	let definition = await doCLI(`cscope -d -fcscope.out -L1 ${word} `);
-	decodeLine(definition as string);
-	let data = await doCLI(`cscope -d -fcscope.out -L3 ${word} `);
-	console.log('data: ' + data);
+	let base = decodeLine(definition as string);
+	await buildGraph(base.funcName, rootGraph).then(() => {
+		rootGraph.forEach(element => {
+			showTree('+', element);
+		});
+	});
+	
+	
+
+	
 
 }
 
