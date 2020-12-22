@@ -6,7 +6,7 @@ This extension creates C call graph (call hierarchy), using the cscope utility.
 
 The main feature is creating a call hierarchy graph, for C code.
 
-\!\[Call hierachy\]\(media/ctree_screen.png\)
+![Call hierachy](ctree_screen.png)
 
 
 > Tip: After creating the call hierarchy, it is possible to jump to any function definition or usage.
@@ -15,11 +15,11 @@ The main feature is creating a call hierarchy graph, for C code.
 
 This extension uses the cscope utility.
 
-# Install on Linux
+### Install on Linux
 
 sudo apt install cscope
 
-# Install on Mac
+### Install on Mac
 
 brew install cscope
 
