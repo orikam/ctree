@@ -8,8 +8,10 @@
         "vscode": "^1.52.0"
     },
     "categories": [
-        "Other"
+        "Programming Languages"
     ],
+    "keywords": ["C", "Call Graph", "hierarchy"],
+    "icon": "tree.png",
     "activationEvents": [
         "onStartupFinished"
     ],

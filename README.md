@@ -1,65 +1,47 @@
-# ctree README
+# VSCode - CTree README
 
-This is the README for your extension "ctree". After writing up a brief description, we recommend including the following sections.
+This extension creates C call graph (call hierarchy), using the cscope utility.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+The main feature is creating a call hierarchy graph, for C code.
 
-For example if there is an image subfolder under your extension project workspace:
+\!\[Call hierachy\]\(media/ctree_screen.png\)
 
-\!\[feature X\]\(images/feature-x.png\)
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+> Tip: After creating the call hierarchy, it is possible to jump to any function definition or usage.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+This extension uses the cscope utility.
 
-## Extension Settings
+# Install on Linux
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+sudo apt install cscope
 
-For example:
+# Install on Mac
 
-This extension contributes the following settings:
-
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+brew install cscope
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+No known issues.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
 
 ### 1.0.0
 
-Initial release of ...
+Initial release.
 
-### 1.0.1
 
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
 
 -----------------------------------------------------------------------------------------------------------
 
-## Working with Markdown
+## Working with CTree
 
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (macOS) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+* Build the cscope database using the build command. The build command can be accessed using the command palette (`ctree build`), or from the editor context (`mouse right click + ctree + build`).
+* Open the call hierarchy by standing on a function, and issue the show command (from the command palette or from the editor context).
+* While overring over CTree entry clicking goto ref will open the editor on the calling line. While clicking got def will open the editor on the definition of the function.
 
 **Enjoy!**
