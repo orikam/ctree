@@ -139,8 +139,9 @@ export function doCLI(command: string) {
 
 export async function buildAndLoadDatabase() {
 	//	let dir = getRoot();
-	await doCLI(`find . -name *.c -o -name *.h > cscope.files`);
-	await doCLI(`cscope -b -R -i cscope.files`);
+	//await doCLI(`find . -name *.c -o -name *.h > cscope.files`);
+	//await doCLI(`cscope -b -R -i cscope.files`);
+	await doCLI(`cscope -Rb`);
 	//await doCLI(`mv cscope.out cscope.out`);
 
 	/*

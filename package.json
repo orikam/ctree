@@ -1,5 +1,6 @@
 {
     "name": "ctree",
+    "publisher": "OriKam",
     "displayName": "ctree",
     "description": "Build calling tree based on cscope",
     "version": "0.0.1",
@@ -56,8 +57,27 @@
                     "when": "view == ctreeview",
                     "group": "inline"
                 }
+            ],
+            "editor/context": [{
+                "submenu": "ctree.editor.context",
+                "group": "ctree"
+            }],
+            "ctree.editor.context": [{
+                    "command": "ctree.build",
+                    "group": "ctree",
+                    "when": "editorTextFocus"
+                },
+                {
+                    "command": "ctree.findcaller",
+                    "group": "ctree",
+                    "when": "editorTextFocus"
+                }
             ]
-        }
+        },
+        "submenus": [{
+            "id": "ctree.editor.context",
+            "label": "ctree"
+        }]
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
